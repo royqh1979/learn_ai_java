@@ -1,0 +1,21 @@
+package net.roy.learn.ai.drools
+
+import net.roy.learn.ai.drools.simple.Message;
+
+rule "Hello World"
+    when
+        m: Message(status==Message.HELLO, message:message)
+    then
+        System.out.println(message);
+        m.setMessage("Goodbye cruel world!");
+        m.setStatus(Message.GOODBYE);
+        update(m)
+end
+
+rule "GoodBye"
+    when
+        m: Message(status==Message.GOODBYE, message:message)
+    then
+        System.out.println(message);
+        m.setMessage(message);
+end

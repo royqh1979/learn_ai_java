@@ -1,0 +1,97 @@
+package net.roy.learn.ai.drools.blockworld;
+
+import net.roy.learn.ai.drools.blockworld.Goal;
+import net.roy.learn.ai.drools.blockworld.Block;
+import net.roy.learn.ai.drools.blockworld.OldBlockState;
+
+rule "Startup Rule"
+    no-loop true
+    when
+    then
+    insert(new Goal("C","A"));
+    insert(new Block("A","table","B"));
+    insert(new Block("B","A","C"));
+    insert(new Block("C","B",""));
+    insert(new Block("D","",""));
+
+    insert(new OldBlockState("A","table","B"));
+    insert(new OldBlockState("B","A","C"));
+    insert(new OldBlockState("C","B",""));
+
+    insert(new Block("table","","A"));
+end
+
+/*
+rule "Add new insert block to state history"
+    salience 1000
+    when
+        block1: Block(b1:name, o1:onTopOf, s1:supporting)
+        not OldBlockState(name==b1,onTopOf==o1,supporting==s1)
+    then
+        insert(new OldBlockState(b1,o1,s1));
+     end
+*/
+
+rule "Set Block On: move block_1 to block_2"
+    when
+        block1: Block(b1:name, on_top_of_1:onTopOf!="", supporting=="")
+        block2: Block(b2:name!=b1, on_top_of_2:onTopOf!="", supporting=="")
+        block3: Block(name==on_top_of_1,on_top_of_3:onTopOf, supporting==b1)
+        not OldBlockState(name==b2,onTopOf==on_top_of_2,supporting==b1)
+    then
+
+        /*
+        System.out.println(block1);
+        System.out.println(block2);
+        System.out.println(block3);
+        */
+        retract(block1);
+        retract(block2) ;
+        retract(block3);
+        insert(new Block(b1,b2,"")) ;
+        insert(new Block(b2,on_top_of_2,b1));
+        insert(new Block(on_top_of_1,on_top_of_3,"")) ;
+        insert(new OldBlockState(b2,on_top_of_2,b1));
+        System.out.println("Moving " + b1 +
+        " from " + on_top_of_1 +
+        " to " + b2);
+end
+
+rule "Clear Block: remove block_1 from block_2"
+    when
+        block1: Block(b1:name!="table", b2:onTopOf!="table",supporting=="")
+        block2: Block(name==b2,on_top_of_2:onTopOf, supporting==b1)
+        not OldBlockState(name==b2,onTopOf==on_top_of_2,supporting=="")
+    then
+        retract(block1);
+        retract(block2) ;
+        insert(new Block(b1,"table","")) ;
+        insert(new Block(b2,on_top_of_2,"")) ;
+        insert(new Block("table","",b1));
+        insert(new OldBlockState(b2,on_top_of_2,"")) ;
+        System.out.println("Clearing: remove " +
+                b1 + " from " +
+                b2 + " to table");
+     end
+
+rule "Clear no-use table block"
+    when
+      table: Block(name=="table",supporting=="")
+    then
+    System.out.println("Clear no use table");
+      retract(table);
+     end
+
+rule "Halt on goal achieved"
+  salience 50
+  when
+    Goal(b1: supportedBlock,b2:supportingBlock);
+    Block(name==b1, supporting==b2)
+  then
+   System.out.println("Done!");
+   drools.halt();
+   end
+
+
+
+
