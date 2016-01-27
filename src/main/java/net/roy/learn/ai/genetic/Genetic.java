@@ -1,6 +1,5 @@
 package net.roy.learn.ai.genetic;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.math3.random.RandomDataGenerator;
 
 import java.util.ArrayList;
@@ -12,7 +11,6 @@ import java.util.List;
  * Created by Roy on 2016/1/26.
  */
 public abstract class Genetic {
-    private int numGenesPerChromosome; // number of genes per chromosome
     private int numChromosomes; // number of chromosomes
     List<Chromosome> chromosomes;
     private float crossoverRatio;
@@ -20,29 +18,31 @@ public abstract class Genetic {
     private int[] rouletteWheel;
     private int rouletteWheelSize;
 
-    public Genetic(int numGenesPerChromosome, int numChromosomes, float crossoverRatio, float mutationRatio) {
-        this.numGenesPerChromosome = numGenesPerChromosome;
-        this.numChromosomes = numChromosomes;
+    public Genetic(int numChromosomes, float crossoverRatio, float mutationRatio) {
+        this.setNumChromosomes(numChromosomes);
         this.crossoverRatio = crossoverRatio;
         this.mutationRatio = mutationRatio;
+        generateFirstGeneration();
+    }
 
+    private void generateFirstGeneration() {
         //generate chrosomes
-        chromosomes=new ArrayList<>(numChromosomes);
+        chromosomes=new ArrayList<>(getNumChromosomes());
         RandomDataGenerator generator=new RandomDataGenerator();
-        for (int i=0;i<numChromosomes;i++) {
-            Chromosome chromosome=new Chromosome(numGenesPerChromosome);
-            for(int j=0;j<numGenesPerChromosome;j++) {
+        for (int i=0;i<getNumChromosomes();i++) {
+            Chromosome chromosome=new Chromosome(getNumGenesPerChromosome());
+            for(int j=0;j<getNumGenesPerChromosome();j++) {
                 chromosome.setBit(j,generator.nextInt(0,1));
             }
             chromosomes.add(chromosome);
         }
         //init rouletteWheel
-        rouletteWheelSize=(1+numChromosomes)*numChromosomes/2;
+        rouletteWheelSize=(1+getNumChromosomes())*getNumChromosomes()/2;
         rouletteWheel=new int[rouletteWheelSize];
-        int num_trials=numChromosomes;
+        int num_trials=getNumChromosomes();
         int index=0;
-        for (int i=0;i<numChromosomes;i++){
-            Arrays.fill(rouletteWheel,index,index+num_trials,i);
+        for (int i=0;i<getNumChromosomes();i++){
+            Arrays.fill(rouletteWheel, index, index + num_trials, i);
             index+=num_trials;
             num_trials--;
         }
@@ -69,10 +69,10 @@ public abstract class Genetic {
 
     private void doRemoveDuplicates() {
         RandomDataGenerator generator=new RandomDataGenerator();
-        for (int i=numChromosomes-1;i>=0;i++){
+        for (int i= getNumChromosomes()-1;i>=0;i--){
             for (int j=0;j<i;j++) {
                 if (chromosomes.get(i).equals(chromosomes.get(j))) {
-                    int g= generator.nextInt(0,numGenesPerChromosome-1);
+                    int g= generator.nextInt(0, getNumGenesPerChromosome() -1);
                     setGene(i,g,!getGene(i,g));
                     break;
                 }
@@ -81,12 +81,12 @@ public abstract class Genetic {
     }
 
     protected void doMutations(){
-        int crossNum = (int)(numChromosomes * crossoverRatio);
-        int keepNum=numChromosomes-crossNum;
+        int crossNum = (int)(getNumChromosomes() * crossoverRatio);
+        int keepNum= getNumChromosomes() -crossNum;
         RandomDataGenerator generator=new RandomDataGenerator();
         //Only new generated chromoses need mutation
-        for (int i=keepNum;i<numChromosomes;i++){
-            for (int j=0;j<numGenesPerChromosome;j++) {
+        for (int i=keepNum;i< getNumChromosomes();i++){
+            for (int j=0;j< getNumGenesPerChromosome();j++) {
                 double r = generator.nextUniform(0, 1);
                 if (r <= mutationRatio) {
                     boolean g=getGene(i,j);
@@ -97,8 +97,8 @@ public abstract class Genetic {
     }
 
     private void doCrossovers() {
-        int crossNum = (int)(numChromosomes * crossoverRatio);
-        int keepNum=numChromosomes-crossNum;
+        int crossNum = (int)(getNumChromosomes() * crossoverRatio);
+        int keepNum= getNumChromosomes() -crossNum;
         List<Chromosome> newGeneration=new ArrayList<>();
 
         //Keep numChromosomes*(1-corssoverRatio) most fitted chromosomes
@@ -109,12 +109,12 @@ public abstract class Genetic {
         for (int i=0;i<crossNum;i++) {
             int c1,c2;
             do{
-                c1=generator.nextInt(0,numChromosomes-1);
-                c2=generator.nextInt(0,numChromosomes-1);
+                c1=generator.nextInt(0, getNumChromosomes() -1);
+                c2=generator.nextInt(0, getNumChromosomes() -1);
             } while (c1==c2);
-            int locus=generator.nextInt(1,numChromosomes-2);
-            Chromosome child=new Chromosome(numGenesPerChromosome);
-            for (int j=0;j<numGenesPerChromosome;j++) {
+            int locus=generator.nextInt(1, getNumChromosomes() -2);
+            Chromosome child=new Chromosome(getNumGenesPerChromosome());
+            for (int j=0;j< getNumGenesPerChromosome();j++) {
                 if (j<locus){
                      child.setBit(j,getGene(c1,j));
                 } else {
@@ -141,13 +141,15 @@ public abstract class Genetic {
         chromosomes.get(chromosomeIndex).setBit(geneIndex, value);
     }
 
+    protected Chromosome getChromosome(int index){
+        return chromosomes.get(index);
+    }
+
     private void sort(){
         Collections.sort(chromosomes,Collections.reverseOrder());
     }
 
-    public int getNumGenesPerChromosome() {
-        return numGenesPerChromosome;
-    }
+    protected abstract int getNumGenesPerChromosome();
 
     public int getNumChromosomes() {
         return numChromosomes;
@@ -161,4 +163,7 @@ public abstract class Genetic {
         return mutationRatio;
     }
 
+    public void setNumChromosomes(int numChromosomes) {
+        this.numChromosomes = numChromosomes;
+    }
 }
